@@ -73,9 +73,8 @@ public class WhalePetEntity extends PathfinderMob {
         // 不受击退
     }
 
-    @Override
-    public int getExperienceReward(net.minecraft.server.level.ServerLevel level) {
-        return 0; // 不产生经验（1.21.1 签名带 ServerLevel）
+    public int getExperienceReward() {
+        return 0; // 不产生经验（1.21.1 无父类同签名，作为自定义方法保留）
     }
 
     @Override

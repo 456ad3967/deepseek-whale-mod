@@ -58,7 +58,8 @@ public final class LowHealthProtection {
         sp.getPersistentData().putLong(CD_TAG, now + COOLDOWN_TICKS);
 
         knockbackHostiles(sp, level);
-        sp.addAbsorptionHealth(ABSORPTION_HEARTS, true);
+        // 1.21.1 无 addAbsorptionHealth；用吸收量设置实现 6 心金心
+        sp.setAbsorptionAmount(sp.getAbsorptionAmount() + ABSORPTION_HEARTS);
     }
 
     /** 击退玩家 10 格内所有敌对生物，带向上分量。 */
