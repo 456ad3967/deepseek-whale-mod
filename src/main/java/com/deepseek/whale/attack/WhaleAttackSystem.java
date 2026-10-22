@@ -1,5 +1,6 @@
 package com.deepseek.whale.attack;
 
+import com.deepseek.whale.DeepseekWhaleMod;
 import com.deepseek.whale.entity.WhalePetEntity;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,15 +18,15 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * 胖虎鲸攻击系统（需求 1 + 2）。
- * 触发方式：伙伴自动攻击其周围 12 格内最近的敌对生物，冷却 1.5 秒。
+ * 触发方式：优先攻击伙伴当前目标（狼式目标选择器设定），无目标时自动索敌周围 12 格内最近的敌对生物，冷却 1.5 秒。
  * 需求1：主目标受 3 点伤害（1.5 心）+ 缓速 III（3 秒）。
  * 需求2：从主目标出发，在 7 格内连锁其他敌对生物，最多额外命中 3 个。
- * 敌对判定：实体生成类别为 MONSTER（覆盖僵尸/骷髅/苦力怕/幻翼等）。
+ * 特效：每次命中在目标位置喷出红色代码流粒子。
  */
 public final class WhaleAttackSystem {
 
     public static final int ATTACK_INTERVAL_TICKS = 30;      // 1.5 秒冷却
-    public static final double ATTACK_RANGE = 12.0D;         // 伙伴索敌半径
+    public static final double ATTACK_RANGE = 12.0D;         // 自动索敌半径
     public static final float DAMAGE = 3.0F;                 // 3 点伤害 = 1.5 心
     public static final int SLOWNESS_TICKS = 60;             // 缓速 3 秒
     public static final int SLOWNESS_AMPLIFIER = 2;          // 等级 III
@@ -52,20 +53,27 @@ public final class WhaleAttackSystem {
         if (now - last < ATTACK_INTERVAL_TICKS) {
             return;
         }
-        Player owner = whale.getOwnerId() == null ? null : level.getPlayerByUUID(whale.getOwnerId());
-        if (owner == null) {
-            return;
-        }
 
-        LivingEntity primary = findNearestHostileAround(level, whale, ATTACK_RANGE, whale, null);
+        LivingEntity primary = whale.getTarget();
+        if (primary == null || !primary.isAlive() || primary == whale) {
+            Player owner = whale.getOwnerId() == null ? null : level.getPlayerByUUID(whale.getOwnerId());
+            if (owner == null) {
+                return;
+            }
+            primary = findNearestHostileAround(level, whale, ATTACK_RANGE, whale, null);
+        }
         if (primary == null) {
             return;
         }
         lastAttackTick.put(whale.getUUID(), (int) now);
+        hitTarget(whale, primary, level);
+    }
 
+    /** 命中主目标并连锁：供 FightTargetGoal / 自动索敌共用。 */
+    public static void hitTarget(WhalePetEntity whale, LivingEntity primary, ServerLevel level) {
         List<LivingEntity> excluded = new ArrayList<>();
         excluded.add(primary);
-        applyHit(whale, primary);
+        applyHit(whale, primary, level);
 
         LivingEntity cursor = primary;
         for (int i = 0; i < MAX_CHAIN_TARGETS; i++) {
@@ -74,13 +82,13 @@ public final class WhaleAttackSystem {
                 break;
             }
             excluded.add(next);
-            applyHit(whale, next);
+            applyHit(whale, next, level);
             cursor = next;
         }
     }
 
-    /** 命中一个目标：3 点伤害 + 缓速 III。 */
-    private static void applyHit(WhalePetEntity whale, LivingEntity target) {
+    /** 命中一个目标：3 点伤害 + 缓速 III + 红色代码流特效。 */
+    private static void applyHit(WhalePetEntity whale, LivingEntity target, ServerLevel level) {
         if (!target.isAlive()) {
             return;
         }
@@ -88,6 +96,15 @@ public final class WhaleAttackSystem {
         if (target.isAlive()) {
             target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, SLOWNESS_TICKS, SLOWNESS_AMPLIFIER), whale);
         }
+        spawnCodeRain(level, target);
+    }
+
+    /** 红色代码流特效：命中位置喷出一簇红色字符粒子。 */
+    private static void spawnCodeRain(ServerLevel level, LivingEntity target) {
+        Vec3 p = target.position();
+        level.sendParticles(DeepseekWhaleMod.CODE_RAIN.get(),
+                p.x, p.y + target.getBbHeight() * 0.8D, p.z,
+                18, 0.4D, 0.8D, 0.4D, 0.35D);
     }
 
     /** 以中心实体为圆心，在半径 range 内找最近的敌对生物。 */

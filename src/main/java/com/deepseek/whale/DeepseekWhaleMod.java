@@ -6,6 +6,8 @@ import com.deepseek.whale.client.WhalePetRenderer;
 import com.deepseek.whale.entity.WhalePetEntity;
 import com.deepseek.whale.protection.LowHealthProtection;
 import com.deepseek.whale.spawn.PetSpawnHandler;
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -29,8 +31,16 @@ public class DeepseekWhaleMod {
                             .clientTrackingRange(10)
                             .build("whale_pet"));
 
+    public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES =
+            DeferredRegister.create(Registries.PARTICLE_TYPE, MODID);
+
+    /** 红色代码流粒子（攻击特效）。 */
+    public static final DeferredHolder<ParticleType<?>, ParticleType<SimpleParticleType>> CODE_RAIN =
+            PARTICLE_TYPES.register("code_rain", () -> new SimpleParticleType(false));
+
     public DeepseekWhaleMod(IEventBus modBus) {
         ENTITY_TYPES.register(modBus);
+        PARTICLE_TYPES.register(modBus);
         modBus.addListener(DeepseekWhaleMod::registerAttributes);
         modBus.addListener(DeepseekWhaleMod::registerRenderers);
         modBus.addListener(DeepseekWhaleMod::registerLayerDefinitions);

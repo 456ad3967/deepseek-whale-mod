@@ -121,7 +121,12 @@ public class WhalePetEntity extends PathfinderMob {
 
     @Override
     protected void registerGoals() {
-        this.goalSelector.addGoal(0, new FollowOwnerGoal());
+        // 狼式目标选择：主人被攻击 → 反击；主人攻击 → 跟随攻击
+        this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
+        this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
+        // 有目标时追击，无目标时跟随主人
+        this.goalSelector.addGoal(0, new FightTargetGoal());
+        this.goalSelector.addGoal(1, new FollowOwnerGoal());
     }
 
     @Override
@@ -147,6 +152,9 @@ public class WhalePetEntity extends PathfinderMob {
         public boolean canUse() {
             if (WhalePetEntity.this.level().isClientSide) {
                 return false;
+            }
+            if (WhalePetEntity.this.getTarget() != null) {
+                return false; // 战斗中不跟随，交给 FightTargetGoal
             }
             if (WhalePetEntity.this.ownerId == null) {
                 return false;
