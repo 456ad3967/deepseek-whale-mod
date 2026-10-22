@@ -23,7 +23,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
  * 规则：
  * 1. 首次进入某世界时，自动在该玩家附近生成一条胖虎鲸；
  * 2. 玩家每次登录、复活、跨维度后，确保伙伴存在；
- * 3. 伙伴已存在则复用（同维度不动，其他维度/过远则传送到身边），不重复生成；
+ * 3. 伙伴已存在则复用（同维度不动，其他维度/过远则传送到身边），不重复生成（依赖 PetData 存档）；
  * 4. 伙伴归属生成时的玩家，其他玩家无法夺取（由实体归属逻辑保证）。
  */
 public final class PetSpawnHandler {
@@ -52,7 +52,7 @@ public final class PetSpawnHandler {
     }
 
     /**
-     * 去重：同一主人名下同时出现多条鲸鱼时（旧存档残留/未加载区块导致），
+     * 去重兜底：同一主人名下同时出现多条鲸鱼时（旧存档残留/未加载区块导致），
      * 只保留离主人最近的一条，其余立即移除。防止"旧实体 + 新实体"并存。
      */
     public static void onEntityJoinLevel(EntityJoinLevelEvent event) {
@@ -102,30 +102,51 @@ public final class PetSpawnHandler {
             return;
         }
         ServerLevel current = player.serverLevel();
+        UUID ownerId = player.getUUID();
+        PetData data = PetData.get(current);
 
-        // 1) 在所有维度查找归属该玩家的存活伙伴
-        WhalePetEntity existing = findOwnedPet(player);
-
-        if (existing != null && existing.isAlive()) {
-            // 已存在 → 复用：同维度且近 → 不动；否则传送回身边
-            if (existing.level() != current
-                    || existing.distanceToSqr(player) > TELEPORT_DISTANCE_SQ) {
-                teleportToPlayer(existing, player);
+        // 1) 优先查持久化存档：有记录 → 在已加载实体中找；找不到（区块未加载）也绝不新生成，
+        //    旧伙伴会随区块加载，并由实体的"主人过远自动传送"逻辑回到身边，避免重进世界重复生成。
+        UUID recorded = data.petFor(ownerId);
+        if (recorded != null) {
+            WhalePetEntity existing = findPetByUuid(player, recorded);
+            if (existing != null && existing.isAlive()) {
+                if (existing.level() != current
+                        || existing.distanceToSqr(player) > TELEPORT_DISTANCE_SQ) {
+                    teleportToPlayer(existing, player);
+                }
             }
             return;
         }
 
-        // 2) 不存在（首次进入/伙伴消失）→ 在玩家附近生成
-        spawnPetNear(player, current);
+        // 2) 无存档记录（旧档/异常残留）：全维度扫描存量伙伴，认领最近一条并写入存档，删除多余者。
+        List<WhalePetEntity> owned = findAllOwnedPets(player);
+        if (!owned.isEmpty()) {
+            WhalePetEntity keep = nearestTo(owned, player);
+            data.bind(ownerId, keep.getUUID());
+            for (WhalePetEntity e : owned) {
+                if (e != keep) {
+                    e.remove(Entity.RemovalReason.DISCARDED);
+                }
+            }
+            return;
+        }
+
+        // 3) 真的不存在（首次进入/伙伴彻底消失）→ 生成并记录存档
+        WhalePetEntity pet = spawnPetNear(player, current);
+        if (pet != null) {
+            data.bind(ownerId, pet.getUUID());
+        }
     }
 
-    private static WhalePetEntity findOwnedPet(ServerPlayer player) {
+    /** 在所有维度已加载实体中按 UUID 找伙伴。 */
+    private static WhalePetEntity findPetByUuid(ServerPlayer player, UUID petUuid) {
         for (ServerLevel level : player.getServer().getAllLevels()) {
             WorldBorder border = level.getWorldBorder();
             AABB area = new AABB(border.getMinX(), level.getMinBuildHeight(), border.getMinZ(),
                     border.getMaxX(), level.getMaxBuildHeight(), border.getMaxZ());
             List<WhalePetEntity> pets = level.getEntitiesOfClass(WhalePetEntity.class, area,
-                    pet -> pet.isAlive() && player.getUUID().equals(pet.getOwnerId()));
+                    pet -> pet.isAlive() && petUuid.equals(pet.getUUID()));
             if (!pets.isEmpty()) {
                 return pets.get(0);
             }
@@ -133,7 +154,33 @@ public final class PetSpawnHandler {
         return null;
     }
 
-    private static void spawnPetNear(ServerPlayer player, ServerLevel level) {
+    /** 在所有维度已加载实体中查找归属该玩家的全部伙伴。 */
+    private static List<WhalePetEntity> findAllOwnedPets(ServerPlayer player) {
+        List<WhalePetEntity> result = new java.util.ArrayList<>();
+        for (ServerLevel level : player.getServer().getAllLevels()) {
+            WorldBorder border = level.getWorldBorder();
+            AABB area = new AABB(border.getMinX(), level.getMinBuildHeight(), border.getMinZ(),
+                    border.getMaxX(), level.getMaxBuildHeight(), border.getMaxZ());
+            result.addAll(level.getEntitiesOfClass(WhalePetEntity.class, area,
+                    pet -> pet.isAlive() && player.getUUID().equals(pet.getOwnerId())));
+        }
+        return result;
+    }
+
+    private static WhalePetEntity nearestTo(List<WhalePetEntity> pets, ServerPlayer player) {
+        WhalePetEntity best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (WhalePetEntity e : pets) {
+            double d = e.distanceToSqr(player);
+            if (best == null || d < bestDist) {
+                best = e;
+                bestDist = d;
+            }
+        }
+        return best;
+    }
+
+    private static WhalePetEntity spawnPetNear(ServerPlayer player, ServerLevel level) {
         Vec3 look = player.getLookAngle();
         if (look.lengthSqr() < 1.0E-4D) {
             look = new Vec3(1.0D, 0.0D, 0.0D);
@@ -142,12 +189,13 @@ public final class PetSpawnHandler {
 
         WhalePetEntity pet = DeepseekWhaleMod.WHALE_PET.get().create(level);
         if (pet == null) {
-            return;
+            return null;
         }
         pet.setPos(pos.x, pos.y, pos.z);
         pet.setOwnerId(player.getUUID());
         pet.setCustomName(Component.literal(PET_NAME));
         level.addFreshEntity(pet);
+        return pet;
     }
 
     private static void teleportToPlayer(WhalePetEntity pet, ServerPlayer player) {
