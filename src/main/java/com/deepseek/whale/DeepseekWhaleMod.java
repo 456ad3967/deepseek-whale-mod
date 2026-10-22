@@ -35,7 +35,7 @@ public class DeepseekWhaleMod {
             DeferredRegister.create(Registries.PARTICLE_TYPE, MODID);
 
     /** 红色代码流粒子（攻击特效）。 */
-    public static final DeferredHolder<ParticleType<?>, ParticleType<SimpleParticleType>> CODE_RAIN =
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> CODE_RAIN =
             PARTICLE_TYPES.register("code_rain", () -> new SimpleParticleType(false));
 
     public DeepseekWhaleMod(IEventBus modBus) {

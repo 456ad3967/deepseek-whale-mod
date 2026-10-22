@@ -125,7 +125,7 @@ public class WhalePetEntity extends PathfinderMob {
         this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
         // 有目标时追击，无目标时跟随主人
-        this.goalSelector.addGoal(0, new FightTargetGoal());
+        this.goalSelector.addGoal(0, new FightTargetGoal(this));
         this.goalSelector.addGoal(1, new FollowOwnerGoal());
     }
 

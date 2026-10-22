@@ -2,6 +2,7 @@ package com.deepseek.whale.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleProvider;
+import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.TextureSheetParticle;
 import net.minecraft.core.particles.SimpleParticleType;
@@ -41,6 +42,11 @@ public class CodeRainParticle extends TextureSheetParticle {
     @Override
     public int getLightColor(float partialTick) {
         return 15728880; // 全亮，代码字符不随环境变暗
+    }
+
+    @Override
+    public ParticleRenderType getRenderType() {
+        return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
     }
 
     public static ParticleProvider<SimpleParticleType> provider(SpriteSet sprites) {
