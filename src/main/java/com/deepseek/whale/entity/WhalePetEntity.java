@@ -170,7 +170,7 @@ public class WhalePetEntity extends PathfinderMob {
         @Override
         public boolean canContinueToUse() {
             return this.owner != null && this.owner.isAlive()
-                    && WhalePetEntity.this.distanceToSqr(this.owner) < 64.0D * 64.0D;
+                    && WhalePetEntity.this.distanceToSqr(this.owner) < 128.0D * 128.0D;
         }
 
         @Override
@@ -194,6 +194,17 @@ public class WhalePetEntity extends PathfinderMob {
             double dist = delta.length();
 
             WhalePetEntity.this.getLookControl().setLookAt(this.owner, 30.0F, 30.0F);
+
+            // 跑远了（>32 格）直接传送到主人身边，等价于原版 PendingTeleports 兜底
+            if (dist > 32.0D) {
+                WhalePetEntity.this.teleportTo(
+                        (net.minecraft.server.level.ServerLevel) WhalePetEntity.this.level(),
+                        this.owner.getX(), this.owner.getY() + 1.0D, this.owner.getZ(),
+                        java.util.Set.of(),
+                        this.owner.getYRot(), 0.0F);
+                WhalePetEntity.this.setDeltaMovement(Vec3.ZERO);
+                return;
+            }
 
             double speed = 0.22D;
             Vec3 move = Vec3.ZERO;
