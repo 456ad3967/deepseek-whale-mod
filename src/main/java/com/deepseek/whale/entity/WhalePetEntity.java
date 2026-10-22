@@ -3,7 +3,10 @@ package com.deepseek.whale.entity;
 import java.util.UUID;
 import javax.annotation.Nullable;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
@@ -24,9 +27,13 @@ public class WhalePetEntity extends PathfinderMob {
 
     private static final String TAG_OWNER = "Owner";
     private static final String TAG_KEEPER = "Keeper";
+    private static final String TAG_SITTING = "Sitting";
 
     @Nullable
     private UUID ownerId;
+
+    /** 待命标记：true 时悬浮原地不跟随主人（右键切换）。 */
+    private boolean sitting;
 
     public WhalePetEntity(EntityType<? extends WhalePetEntity> type, Level level) {
         super(type, level);
@@ -92,6 +99,45 @@ public class WhalePetEntity extends PathfinderMob {
     }
 
     // ------------------------------------------------------------------
+    // 需求（迭代）：不挡放置方块 + 右键待机
+    // ------------------------------------------------------------------
+
+    /**
+     * 手持物品时射线穿透（玩家拿方块/工具时不挡放置方块）；
+     * 空手时可被射线命中，用于右键切换待机。
+     */
+    @Override
+    public boolean isPickable() {
+        if (this.level().isClientSide) {
+            Player p = this.level().getNearestPlayer(this, 8.0D);
+            return p == null || p.getMainHandItem().isEmpty();
+        }
+        return true;
+    }
+
+    /** 主人空手右键：切换 待命/跟随。 */
+    @Override
+    public InteractionResult mobInteract(Player player, InteractionHand hand) {
+        if (!this.isOwnedBy(player)) {
+            return InteractionResult.PASS; // 非主人不可操作，他人无法夺取
+        }
+        if (player.level().isClientSide) {
+            return InteractionResult.SUCCESS;
+        }
+        this.sitting = !this.sitting;
+        player.displayClientMessage(
+                Component.literal(this.sitting
+                        ? "§e[人机肥鱼] 原地待命中~"
+                        : "§e[人机肥鱼] 出发！跟上！"),
+                true);
+        return InteractionResult.SUCCESS;
+    }
+
+    public boolean isSitting() {
+        return this.sitting;
+    }
+
+    // ------------------------------------------------------------------
     // 保存
     // ------------------------------------------------------------------
 
@@ -104,6 +150,7 @@ public class WhalePetEntity extends PathfinderMob {
         if (this.getCustomName() != null) {
             tag.putString(TAG_KEEPER, this.getCustomName().getString());
         }
+        tag.putBoolean(TAG_SITTING, this.sitting);
     }
 
     @Override
@@ -113,6 +160,7 @@ public class WhalePetEntity extends PathfinderMob {
             this.ownerId = tag.getUUID(TAG_OWNER);
         }
         // keeper 名用于展示，实体命名由生成系统负责，这里只恢复归属
+        this.sitting = tag.getBoolean(TAG_SITTING);
     }
 
     // ------------------------------------------------------------------
@@ -136,6 +184,10 @@ public class WhalePetEntity extends PathfinderMob {
             this.setNoGravity(true);
             this.fallDistance = 0.0F; // 免疫摔落积累
             this.setAirSupply(this.getMaxAirSupply()); // 水下不缺氧
+            if (this.sitting && this.getTarget() == null) {
+                // 待命且无战斗目标：悬浮原地不动
+                this.setDeltaMovement(Vec3.ZERO);
+            }
             // 偶尔播放原版闲置音效（约 12 秒一次，二选一），移动时撒蓝色尾迹粒子
             if (this.tickCount % 240 == 0 && this.random.nextInt(3) == 0) {
                 this.level().playSound(null, this.getX(), this.getY(), this.getZ(),
@@ -181,6 +233,9 @@ public class WhalePetEntity extends PathfinderMob {
             if (WhalePetEntity.this.level().isClientSide) {
                 return false;
             }
+            if (WhalePetEntity.this.sitting) {
+                return false; // 待命中不跟随
+            }
             if (WhalePetEntity.this.getTarget() != null) {
                 return false; // 战斗中不跟随，交给 FightTargetGoal
             }
@@ -216,9 +271,16 @@ public class WhalePetEntity extends PathfinderMob {
             if (this.owner == null) {
                 return;
             }
-            Vec3 delta = this.owner.position()
-                    .add(0.0D, 0.8D, 0.0D)
-                    .subtract(WhalePetEntity.this.position());
+            // 跟随锚点：主人身后 2.5 格、头顶偏上，避免贴脸堵路
+            Vec3 look = this.owner.getLookAngle();
+            Vec3 back = new Vec3(look.x, 0.0D, look.z);
+            if (back.lengthSqr() < 1.0E-4D) {
+                back = new Vec3(1.0D, 0.0D, 0.0D);
+            } else {
+                back = back.normalize().scale(-2.5D);
+            }
+            Vec3 anchor = this.owner.position().add(back.x, 0.6D, back.z);
+            Vec3 delta = anchor.subtract(WhalePetEntity.this.position());
             double dist = delta.length();
 
             WhalePetEntity.this.getLookControl().setLookAt(this.owner, 30.0F, 30.0F);
@@ -241,14 +303,14 @@ public class WhalePetEntity extends PathfinderMob {
 
             double speed = 0.22D;
             Vec3 move = Vec3.ZERO;
-            if (dist > 2.5D) {
-                // 向主人游去：水平按方向，垂直按高度差平滑逼近
+            if (dist > 3.0D) {
+                // 离锚点太远：靠近
                 Vec3 dir = delta.normalize();
                 double dy = delta.y * 0.12D;
                 dy = Math.max(-0.4D, Math.min(0.4D, dy));
                 move = new Vec3(dir.x * speed, dy, dir.z * speed);
-            } else if (dist < 1.4D) {
-                // 太近就缓退一点
+            } else if (dist < 2.0D) {
+                // 太近：缓退
                 Vec3 dir = delta.normalize();
                 move = new Vec3(-dir.x * 0.05D, 0.0D, -dir.z * 0.05D);
             }
