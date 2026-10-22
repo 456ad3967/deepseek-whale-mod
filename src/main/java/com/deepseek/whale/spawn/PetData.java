@@ -42,7 +42,7 @@ public final class PetData extends SavedData {
         setDirty();
     }
 
-    public static PetData load(CompoundTag tag) {
+    public static PetData load(CompoundTag tag, HolderLookup.Provider registries) {
         PetData data = new PetData();
         ListTag list = tag.getList("pets", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
