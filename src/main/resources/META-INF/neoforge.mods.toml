@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[2,)"
+license="MIT"
+
+[[mods]]
+modId="deepseek_whale"
+version="0.1.1"
+displayName="人机肥鱼"
+authors="Doubao + User"
+description='''DeepSeek 胖虎鲸伙伴模组。自动生成并归属玩家的胖虎鲸伙伴：攻击 3 点伤害+缓速III、射弹连锁、低血保护（击退III+12点伤害吸收，5分钟冷却）。'''
+
+[[dependencies.deepseek_whale]]
+modId="neoforge"
+type="required"
+versionRange="[21.1,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.deepseek_whale]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.22)"
+ordering="NONE"
+side="BOTH"

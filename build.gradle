@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version '1.0.11'
+}
+
+group = 'com.deepseek'
+version = '0.1.1'
+
+base {
+    archivesName = 'deepseek-whale'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = '21.1.219'
+    validateAccessTransformers = true
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+        }
+        data {
+            data()
+        }
+    }
+
+    mods {
+        "deepseek_whale" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
