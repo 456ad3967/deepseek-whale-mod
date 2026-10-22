@@ -42,6 +42,14 @@ public class TokenOrbitParticle extends TextureSheetParticle {
         this.centreX = x;
         this.centreY = y;
         this.centreZ = z;
+        // sendParticles 的 speed=0 时 provider 收到的 dx/dz 近似 0；
+        // 此时自动在身体周围随机取一个轨道起点（原版 spawnAura 的随机半径）
+        if (offX * offX + offZ * offZ < 0.0001D) {
+            double angle = this.random.nextDouble() * Math.PI * 2.0D;
+            double radius = 0.45D + this.random.nextDouble() * 0.55D;
+            offX = Math.cos(angle) * radius;
+            offZ = Math.sin(angle) * radius;
+        }
         this.offX = offX;
         this.offZ = offZ;
         this.bobPhase = this.random.nextDouble() * 3.141592653589793D * 2.0D;
@@ -59,6 +67,7 @@ public class TokenOrbitParticle extends TextureSheetParticle {
     }
 
     private void trackWhale() {
+        // 2.5 格内找最近的鲸鱼伙伴并跟随（原版逻辑，实体类换成 WhalePetEntity）
         double reach = 2.5D;
         var candidates = this.level.getEntitiesOfClass(WhalePetEntity.class,
                 new AABB(this.centreX - reach, this.centreY - reach, this.centreZ - reach,

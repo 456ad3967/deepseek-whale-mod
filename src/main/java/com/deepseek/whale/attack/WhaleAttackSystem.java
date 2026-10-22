@@ -22,10 +22,10 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * 胖虎鲸攻击系统（需求 1 + 2）。
- * 触发方式：狼式——只攻击目标选择器（主人被打→反击 / 主人出手→帮打）设定的目标，不自动索敌，冷却 1.5 秒。
+ * 触发方式：狼式——只攻击目标选择器（主人被打 → 反击 / 主人出手 → 帮打）设定的目标，不自动索敌，冷却 1.5 秒。
  * 需求1：主目标受 3 点伤害（1.5 心）+ 缓速 III（3 秒）。
  * 需求2：从主目标出发，在 7 格内连锁其他敌对生物，最多额外命中 3 个。
- * 特效：红色代码流（定制）+ 原版 kill_impact/kill_text/爆炸粒子与音效（照抄 0.1.0 WhaleAttack）。
+ * 特效：主攻击 / 连锁均撒原版 "/kill you" 射线粒子，命中喷红色代码流 + 原版 kill_impact/爆炸粒子与音效（照抄 0.1.0 WhaleAttack）。
  */
 public final class WhaleAttackSystem {
 
@@ -74,18 +74,22 @@ public final class WhaleAttackSystem {
     public static void hitTarget(WhalePetEntity whale, LivingEntity primary, ServerLevel level) {
         List<LivingEntity> excluded = new ArrayList<>();
         excluded.add(primary);
+        // 主攻击射线：从鲸鱼头部指向主目标（原版 drawHead 的 KILL_TEXT 轨迹）
+        Vec3 fromWhale = whale.position().add(0.0D, whale.getBbHeight() * 0.8D, 0.0D);
+        Vec3 toPrimary = primary.position().add(0.0D, primary.getBbHeight() * 0.5D, 0.0D);
+        spawnKillTextAlong(level, fromWhale, toPrimary);
         applyHit(whale, primary, level);
 
         LivingEntity cursor = primary;
-        // 射线轨迹撒原版标记粒子（原版 drawHead 的 KILL_TEXT）
+        // 连锁段：前一个目标到下一个目标之间也撒原版标记粒子
         for (int i = 0; i < MAX_CHAIN_TARGETS; i++) {
-            Vec3 from = cursor.position();
+            Vec3 from = cursor.position().add(0.0D, cursor.getBbHeight() * 0.5D, 0.0D);
             LivingEntity next = findNearestHostileAround(level, cursor, CHAIN_RANGE, whale, excluded);
             if (next == null) {
                 break;
             }
             excluded.add(next);
-            Vec3 to = next.position();
+            Vec3 to = next.position().add(0.0D, next.getBbHeight() * 0.5D, 0.0D);
             spawnKillTextAlong(level, from, to);
             applyHit(whale, next, level);
             cursor = next;
@@ -124,7 +128,7 @@ public final class WhaleAttackSystem {
                 18, 0.4D, 0.8D, 0.4D, 0.35D);
     }
 
-    /** 沿连锁射线方向撒原版 kill_text 标记粒子。 */
+    /** 沿射线方向撒原版 kill_text（红色斜体 "/kill you"）标记粒子。 */
     private static void spawnKillTextAlong(ServerLevel level, Vec3 from, Vec3 to) {
         Vec3 dir = to.subtract(from);
         double len = dir.length();

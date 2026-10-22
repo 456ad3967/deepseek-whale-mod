@@ -151,6 +151,19 @@ public class WhalePetEntity extends PathfinderMob {
                         this.getZ() + (this.random.nextDouble() - 0.5D) * 0.16D,
                         1, 0.0D, 0.0D, 0.0D, 0.0D);
             }
+            // 原版 aura：身体周围持续环绕白色"10"字符粒子（token_spark / token_orbit 均为"10"贴图）
+            if (this.tickCount % 10 == 0) {
+                ((ServerLevel) this.level()).sendParticles(com.deepseek.whale.DeepSeekParticles.TOKEN_ORBIT.get(),
+                        this.getX(), this.getY() + 0.4D, this.getZ(),
+                        1, 0.0D, 0.0D, 0.0D, 0.0D);
+            }
+            if (this.tickCount % 14 == 0) {
+                ((ServerLevel) this.level()).sendParticles(com.deepseek.whale.DeepSeekParticles.TOKEN_SPARK.get(),
+                        this.getX() + (this.random.nextDouble() - 0.5D) * 1.2D,
+                        this.getY() + 0.3D + this.random.nextDouble() * 1.0D,
+                        this.getZ() + (this.random.nextDouble() - 0.5D) * 1.2D,
+                        1, 0.0D, 0.0D, 0.0D, 0.0D);
+            }
             com.deepseek.whale.attack.WhaleAttackSystem.tickWhale(this, (ServerLevel) this.level());
         }
     }
