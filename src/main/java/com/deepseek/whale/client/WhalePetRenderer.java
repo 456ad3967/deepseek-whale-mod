@@ -3,7 +3,7 @@ package com.deepseek.whale.client;
 import com.deepseek.whale.DeepseekWhaleMod;
 import com.deepseek.whale.entity.WhalePetEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
@@ -26,7 +26,7 @@ public class WhalePetRenderer extends MobRenderer<WhalePetEntity, WhalePetModel>
 
     @Override
     public void render(WhalePetEntity entity, float entityYaw, float partialTicks,
-                       PoseStack poseStack, VertexConsumer buffer, int packedLight) {
+                       PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         // 整体缩小 15%：原版鲸鱼在 1.21.1 的比例下偏大
         poseStack.scale(0.85F, 0.85F, 0.85F);
         super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
