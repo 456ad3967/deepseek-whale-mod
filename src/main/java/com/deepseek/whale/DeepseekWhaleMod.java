@@ -41,6 +41,8 @@ public class DeepseekWhaleMod {
     public DeepseekWhaleMod(IEventBus modBus) {
         ENTITY_TYPES.register(modBus);
         PARTICLE_TYPES.register(modBus);
+        DeepSeekParticles.register(modBus);
+        DeepSeekSounds.register(modBus);
         modBus.addListener(DeepseekWhaleMod::registerAttributes);
         modBus.addListener(DeepseekWhaleMod::registerRenderers);
         modBus.addListener(DeepseekWhaleMod::registerLayerDefinitions);

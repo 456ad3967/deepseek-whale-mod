@@ -42,10 +42,6 @@ public class WhalePetEntity extends PathfinderMob {
                 .add(Attributes.FOLLOW_RANGE, 48.0D);
     }
 
-    // ------------------------------------------------------------------
-    // 归属
-    // ------------------------------------------------------------------
-
     public void setOwnerId(@Nullable UUID uuid) {
         this.ownerId = uuid;
     }
@@ -59,10 +55,6 @@ public class WhalePetEntity extends PathfinderMob {
         return this.ownerId != null && this.ownerId.equals(player.getUUID());
     }
 
-    // ------------------------------------------------------------------
-    // 需求4：免疫伤害 / 不受击退 / 无经验
-    // ------------------------------------------------------------------
-
     @Override
     public boolean hurt(DamageSource source, float amount) {
         return false; // 免疫一切伤害
@@ -74,7 +66,7 @@ public class WhalePetEntity extends PathfinderMob {
     }
 
     public int getExperienceReward() {
-        return 0; // 不产生经验（1.21.1 无父类同签名，作为自定义方法保留）
+        return 0; // 不产生经验
     }
 
     @Override
@@ -84,16 +76,12 @@ public class WhalePetEntity extends PathfinderMob {
 
     @Override
     public boolean canBeCollidedWith() {
-        return false; // 不阻挡玩家行走（但保留碰撞箱用于点击）
+        return false; // 不阻挡玩家行走
     }
 
     public boolean canBeLeashed(Player player) {
-        return false; // 不可牵绳，防止他人牵走
+        return false; // 不可牵绳
     }
-
-    // ------------------------------------------------------------------
-    // 保存
-    // ------------------------------------------------------------------
 
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
@@ -112,12 +100,7 @@ public class WhalePetEntity extends PathfinderMob {
         if (tag.hasUUID(TAG_OWNER)) {
             this.ownerId = tag.getUUID(TAG_OWNER);
         }
-        // keeper 名用于展示，实体命名由生成系统负责，这里只恢复归属
     }
-
-    // ------------------------------------------------------------------
-    // 行为：悬浮跟随主人
-    // ------------------------------------------------------------------
 
     @Override
     protected void registerGoals() {
@@ -136,6 +119,21 @@ public class WhalePetEntity extends PathfinderMob {
             this.setNoGravity(true);
             this.fallDistance = 0.0F; // 免疫摔落积累
             this.setAirSupply(this.getMaxAirSupply()); // 水下不缺氧
+            // 偶尔播放原版闲置音效（约 12 秒一次，二选一），移动时撒蓝色尾迹粒子
+            if (this.tickCount % 240 == 0 && this.random.nextInt(3) == 0) {
+                this.level().playSound(null, this.getX(), this.getY(), this.getZ(),
+                        this.random.nextBoolean()
+                                ? com.deepseek.whale.DeepSeekSounds.WHALE_IDLE.get()
+                                : com.deepseek.whale.DeepSeekSounds.WHALE_IDLE2.get(),
+                        net.minecraft.sounds.SoundSource.NEUTRAL, 0.5F, 1.0F);
+            }
+            if (this.getDeltaMovement().horizontalDistanceSqr() > 0.0025D && this.random.nextInt(3) == 0) {
+                this.level().sendParticles(com.deepseek.whale.DeepSeekParticles.TOKEN_TRAIL.get(),
+                        this.getX() + (this.random.nextDouble() - 0.5D) * 0.16D,
+                        this.getY() + 0.15D + this.random.nextDouble() * 0.3D,
+                        this.getZ() + (this.random.nextDouble() - 0.5D) * 0.16D,
+                        1, 0.0D, 0.0D, 0.0D, 0.0D);
+            }
             com.deepseek.whale.attack.WhaleAttackSystem.tickWhale(this, (ServerLevel) this.level());
         }
     }
@@ -175,7 +173,6 @@ public class WhalePetEntity extends PathfinderMob {
 
         @Override
         public void start() {
-            // 无额外启动逻辑
         }
 
         @Override
@@ -203,6 +200,11 @@ public class WhalePetEntity extends PathfinderMob {
                         java.util.Set.of(),
                         this.owner.getYRot(), 0.0F);
                 WhalePetEntity.this.setDeltaMovement(Vec3.ZERO);
+                // 到达音效（原版 WHALE_ARRIVE）
+                WhalePetEntity.this.level().playSound(null,
+                        this.owner.getX(), this.owner.getY(), this.owner.getZ(),
+                        com.deepseek.whale.DeepSeekSounds.WHALE_ARRIVE.get(),
+                        net.minecraft.sounds.SoundSource.NEUTRAL, 0.7F, 1.0F);
                 return;
             }
 
