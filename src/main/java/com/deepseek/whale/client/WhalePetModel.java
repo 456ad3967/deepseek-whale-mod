@@ -66,16 +66,16 @@ public class WhalePetModel extends EntityModel<WhalePetEntity> {
                         .addBox(-1.0F, 0.0F, -1.0F, 2.0F, 1.0F, 5.0F),
                 PartPose.offsetAndRotation(5.0F, 19.0F, -1.0F, 0.0F, 0.0F, -0.15F));
 
-        // 眼睛（左右各一，白底，瞳孔由贴图呈现）
+        // 眼睛（左右各一，白底大眼，瞳孔由贴图呈现，凸出脸面更萌）
         root.addOrReplaceChild("eyeLeft", CubeListBuilder.create()
                         .texOffs(52, 34)
-                        .addBox(-1.0F, -1.0F, -1.0F, 2.0F, 2.0F, 1.0F),
-                PartPose.offset(-4.5F, 18.5F, -6.5F));
+                        .addBox(-1.5F, -1.5F, -1.0F, 3.0F, 3.0F, 1.0F),
+                PartPose.offset(-4.5F, 18.0F, -7.0F));
 
         root.addOrReplaceChild("eyeRight", CubeListBuilder.create()
                         .texOffs(52, 40)
-                        .addBox(-1.0F, -1.0F, -1.0F, 2.0F, 2.0F, 1.0F),
-                PartPose.offset(4.5F, 18.5F, -6.5F));
+                        .addBox(-1.5F, -1.5F, -1.0F, 3.0F, 3.0F, 1.0F),
+                PartPose.offset(4.5F, 18.0F, -7.0F));
 
         return LayerDefinition.create(mesh, 64, 64);
     }
