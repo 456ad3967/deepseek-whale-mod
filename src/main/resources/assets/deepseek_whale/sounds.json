@@ -1,0 +1,56 @@
+{
+  "whale_idle": {
+    "subtitle": "subtitle.deepseek_whale.whale_idle",
+    "sounds": [
+      {
+        "name": "deepseek_whale:whale_idle",
+        "stream": false
+      }
+    ]
+  },
+  "whale_idle2": {
+    "subtitle": "subtitle.deepseek_whale.whale_idle2",
+    "sounds": [
+      {
+        "name": "deepseek_whale:whale_idle2",
+        "stream": false
+      }
+    ]
+  },
+  "whale_ack": {
+    "subtitle": "subtitle.deepseek_whale.whale_ack",
+    "sounds": [
+      {
+        "name": "deepseek_whale:whale_ack",
+        "stream": false
+      }
+    ]
+  },
+  "whale_run": {
+    "subtitle": "subtitle.deepseek_whale.whale_run",
+    "sounds": [
+      {
+        "name": "deepseek_whale:whale_run",
+        "stream": false
+      }
+    ]
+  },
+  "whale_arrive": {
+    "subtitle": "subtitle.deepseek_whale.whale_arrive",
+    "sounds": [
+      {
+        "name": "deepseek_whale:whale_arrive",
+        "stream": false
+      }
+    ]
+  },
+  "whale_speak": {
+    "subtitle": "subtitle.deepseek_whale.whale_speak",
+    "sounds": [
+      {
+        "name": "deepseek_whale:whale_speak",
+        "stream": false
+      }
+    ]
+  }
+}

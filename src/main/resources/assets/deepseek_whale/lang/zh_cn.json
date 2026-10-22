@@ -1,3 +1,9 @@
 {
-  "entity.deepseek_whale.whale_pet": "人机肥鱼"
+  "entity.deepseek_whale.whale_pet": "人机肥鱼",
+  "subtitle.deepseek_whale.whale_idle": "DeepSeek：合成了一声鸣叫",
+  "subtitle.deepseek_whale.whale_idle2": "DeepSeek：合成了一声啁啾",
+  "subtitle.deepseek_whale.whale_ack": "DeepSeek：正在回应你",
+  "subtitle.deepseek_whale.whale_arrive": "DeepSeek：重新定位",
+  "subtitle.deepseek_whale.whale_run": "DeepSeek：正在运算",
+  "subtitle.deepseek_whale.whale_speak": "DeepSeek：生成中"
 }

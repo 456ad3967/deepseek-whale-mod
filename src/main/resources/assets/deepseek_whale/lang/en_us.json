@@ -1,3 +1,9 @@
 {
-  "entity.deepseek_whale.whale_pet": "Fat Whale"
+  "entity.deepseek_whale.whale_pet": "Fat Whale",
+  "subtitle.deepseek_whale.whale_idle": "DeepSeek: synthesised a call",
+  "subtitle.deepseek_whale.whale_idle2": "DeepSeek: synthesised a chirp",
+  "subtitle.deepseek_whale.whale_ack": "DeepSeek: answering you",
+  "subtitle.deepseek_whale.whale_arrive": "DeepSeek: relocated",
+  "subtitle.deepseek_whale.whale_run": "DeepSeek: computing",
+  "subtitle.deepseek_whale.whale_speak": "DeepSeek: generating"
 }
