@@ -1,6 +1,8 @@
 package com.deepseek.whale.client;
 
 import com.deepseek.whale.entity.WhalePetEntity;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -94,6 +96,11 @@ public class WhalePetModel extends EntityModel<WhalePetEntity> {
     }
 
     @Override
+    public void renderToBuffer(PoseStack poseStack, VertexConsumer buffer,
+                               int packedLight, int packedOverlay, int color) {
+        this.root.render(poseStack, buffer, packedLight, packedOverlay, color);
+    }
+
     public ModelPart root() {
         return this.root;
     }

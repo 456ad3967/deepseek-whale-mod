@@ -30,7 +30,7 @@ public class WhalePetEntity extends PathfinderMob {
 
     public WhalePetEntity(EntityType<? extends WhalePetEntity> type, Level level) {
         super(type, level);
-        this.setPersistenceRequired(true);
+        this.setPersistenceRequired();
         this.setNoGravity(true);
         this.xpReward = 0;
     }
@@ -74,8 +74,8 @@ public class WhalePetEntity extends PathfinderMob {
     }
 
     @Override
-    public int getExperienceReward() {
-        return 0; // 不产生经验
+    public int getExperienceReward(net.minecraft.server.level.ServerLevel level) {
+        return 0; // 不产生经验（1.21.1 签名带 ServerLevel）
     }
 
     @Override
@@ -88,7 +88,6 @@ public class WhalePetEntity extends PathfinderMob {
         return false; // 不阻挡玩家行走（但保留碰撞箱用于点击）
     }
 
-    @Override
     public boolean canBeLeashed(Player player) {
         return false; // 不可牵绳，防止他人牵走
     }

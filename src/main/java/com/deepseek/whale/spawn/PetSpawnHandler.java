@@ -3,10 +3,14 @@ package com.deepseek.whale.spawn;
 import com.deepseek.whale.DeepseekWhaleMod;
 import com.deepseek.whale.entity.WhalePetEntity;
 import java.util.List;
+import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.border.WorldBorder;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
@@ -66,9 +70,11 @@ public final class PetSpawnHandler {
     }
 
     private static WhalePetEntity findOwnedPet(ServerPlayer player) {
-        for (ServerLevel level : player.server().getAllLevels()) {
-            List<WhalePetEntity> pets = level.getEntitiesOfClass(WhalePetEntity.class,
-                    level.getWorldBorder().getCollisionBox(),
+        for (ServerLevel level : player.getServer().getAllLevels()) {
+            WorldBorder border = level.getWorldBorder();
+            AABB area = new AABB(border.getMinX(), level.getMinBuildHeight(), border.getMinZ(),
+                    border.getMaxX(), level.getMaxBuildHeight(), border.getMaxZ());
+            List<WhalePetEntity> pets = level.getEntitiesOfClass(WhalePetEntity.class, area,
                     pet -> pet.isAlive() && player.getUUID().equals(pet.getOwnerId()));
             if (!pets.isEmpty()) {
                 return pets.get(0);
@@ -101,6 +107,6 @@ public final class PetSpawnHandler {
         BlockPos safe = BlockPos.containing(pos);
         // 悬浮生物不需要落地判定，直接传送到目标点
         pet.teleportTo(destination, safe.getX() + 0.5D, safe.getY() + 0.1D, safe.getZ() + 0.5D,
-                player.getYRot(), player.getXRot());
+                Set.of(), player.getYRot(), player.getXRot());
     }
 }

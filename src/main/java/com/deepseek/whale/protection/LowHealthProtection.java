@@ -58,7 +58,7 @@ public final class LowHealthProtection {
         sp.getPersistentData().putLong(CD_TAG, now + COOLDOWN_TICKS);
 
         knockbackHostiles(sp, level);
-        sp.addAbsorptionHealth(ABSORPTION_HEARTS);
+        sp.addAbsorptionHealth(ABSORPTION_HEARTS, true);
     }
 
     /** 击退玩家 10 格内所有敌对生物，带向上分量。 */
