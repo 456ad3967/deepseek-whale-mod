@@ -46,6 +46,7 @@ public class DeepseekWhaleMod {
         gameBus.addListener(PetSpawnHandler::onLoggedIn);
         gameBus.addListener(PetSpawnHandler::onRespawn);
         gameBus.addListener(PetSpawnHandler::onChangedDimension);
+        gameBus.addListener(PetSpawnHandler::onEntityJoinLevel);
     }
 
     private static void registerAttributes(EntityAttributeCreationEvent event) {
