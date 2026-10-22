@@ -42,6 +42,10 @@ public class WhalePetEntity extends PathfinderMob {
                 .add(Attributes.FOLLOW_RANGE, 48.0D);
     }
 
+    // ------------------------------------------------------------------
+    // 归属
+    // ------------------------------------------------------------------
+
     public void setOwnerId(@Nullable UUID uuid) {
         this.ownerId = uuid;
     }
@@ -55,6 +59,10 @@ public class WhalePetEntity extends PathfinderMob {
         return this.ownerId != null && this.ownerId.equals(player.getUUID());
     }
 
+    // ------------------------------------------------------------------
+    // 需求4：免疫伤害 / 不受击退 / 无经验
+    // ------------------------------------------------------------------
+
     @Override
     public boolean hurt(DamageSource source, float amount) {
         return false; // 免疫一切伤害
@@ -66,7 +74,7 @@ public class WhalePetEntity extends PathfinderMob {
     }
 
     public int getExperienceReward() {
-        return 0; // 不产生经验
+        return 0; // 不产生经验（1.21.1 无父类同签名，作为自定义方法保留）
     }
 
     @Override
@@ -76,12 +84,16 @@ public class WhalePetEntity extends PathfinderMob {
 
     @Override
     public boolean canBeCollidedWith() {
-        return false; // 不阻挡玩家行走
+        return false; // 不阻挡玩家行走（但保留碰撞箱用于点击）
     }
 
     public boolean canBeLeashed(Player player) {
-        return false; // 不可牵绳
+        return false; // 不可牵绳，防止他人牵走
     }
+
+    // ------------------------------------------------------------------
+    // 保存
+    // ------------------------------------------------------------------
 
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
@@ -100,7 +112,12 @@ public class WhalePetEntity extends PathfinderMob {
         if (tag.hasUUID(TAG_OWNER)) {
             this.ownerId = tag.getUUID(TAG_OWNER);
         }
+        // keeper 名用于展示，实体命名由生成系统负责，这里只恢复归属
     }
+
+    // ------------------------------------------------------------------
+    // 行为：悬浮跟随主人
+    // ------------------------------------------------------------------
 
     @Override
     protected void registerGoals() {
@@ -128,7 +145,7 @@ public class WhalePetEntity extends PathfinderMob {
                         net.minecraft.sounds.SoundSource.NEUTRAL, 0.5F, 1.0F);
             }
             if (this.getDeltaMovement().horizontalDistanceSqr() > 0.0025D && this.random.nextInt(3) == 0) {
-                this.level().sendParticles(com.deepseek.whale.DeepSeekParticles.TOKEN_TRAIL.get(),
+                ((ServerLevel) this.level()).sendParticles(com.deepseek.whale.DeepSeekParticles.TOKEN_TRAIL.get(),
                         this.getX() + (this.random.nextDouble() - 0.5D) * 0.16D,
                         this.getY() + 0.15D + this.random.nextDouble() * 0.3D,
                         this.getZ() + (this.random.nextDouble() - 0.5D) * 0.16D,
@@ -173,6 +190,7 @@ public class WhalePetEntity extends PathfinderMob {
 
         @Override
         public void start() {
+            // 无额外启动逻辑
         }
 
         @Override
