@@ -25,7 +25,7 @@ import net.minecraft.world.phys.Vec3;
  * 触发方式：狼式——只攻击目标选择器（主人被打 → 反击 / 主人出手 → 帮打）设定的目标，不自动索敌，冷却 1.5 秒。
  * 需求1：主目标受 3 点伤害（1.5 心）+ 缓速 III（3 秒）。
  * 需求2：从主目标出发，在 7 格内连锁其他敌对生物，最多额外命中 3 个。
- * 特效：主攻击 / 连锁均撒原版 "/kill you" 射线粒子，命中喷红色代码流 + 原版 kill_impact/爆炸粒子与音效（照抄 0.1.0 WhaleAttack）。
+ * 特效：主攻击 / 连锁均撒原版 "/kill you" 射线粒子（每 2 格一个），命中喷红色代码流 + 原版 kill_impact/爆炸粒子与音效（照抄 0.1.0 WhaleAttack）。
  */
 public final class WhaleAttackSystem {
 
@@ -74,8 +74,9 @@ public final class WhaleAttackSystem {
     public static void hitTarget(WhalePetEntity whale, LivingEntity primary, ServerLevel level) {
         List<LivingEntity> excluded = new ArrayList<>();
         excluded.add(primary);
-        // 主攻击射线：从鲸鱼头部指向主目标（原版 drawHead 的 KILL_TEXT 轨迹）
-        Vec3 fromWhale = whale.position().add(0.0D, whale.getBbHeight() * 0.8D, 0.0D);
+        // 主攻击射线：从鲸鱼嘴部（身体中前部、约 1.1 格高，随朝向转动）指向主目标（原版 drawHead 的 KILL_TEXT 轨迹）
+        Vec3 facing = whale.getViewVector(1.0F);
+        Vec3 fromWhale = whale.position().add(0.0D, 1.1D, 0.0D).add(facing.scale(0.5D));
         Vec3 toPrimary = primary.position().add(0.0D, primary.getBbHeight() * 0.5D, 0.0D);
         spawnKillTextAlong(level, fromWhale, toPrimary);
         applyHit(whale, primary, level);
@@ -128,18 +129,19 @@ public final class WhaleAttackSystem {
                 18, 0.4D, 0.8D, 0.4D, 0.35D);
     }
 
-    /** 沿射线方向撒原版 kill_text（红色斜体 "/kill you"）标记粒子。 */
+    /** 沿射线方向稀疏撒原版 kill_text（红色斜体 "/kill you"）粒子，每 2 格一个，保持可读。 */
     private static void spawnKillTextAlong(ServerLevel level, Vec3 from, Vec3 to) {
         Vec3 dir = to.subtract(from);
         double len = dir.length();
         if (len < 0.01D) {
             return;
         }
-        Vec3 step = dir.scale(1.0D / Math.max(1.0D, len * 2.0D));
-        for (double t = 0.5D; t < len; t += 0.5D) {
-            Vec3 at = from.add(step.scale(t * 2.0D));
+        Vec3 unit = dir.scale(1.0D / len);
+        int count = (int) Math.floor(len / 2.0D);
+        for (int i = 0; i < count; i++) {
+            Vec3 at = from.add(unit.scale(2.0D * i + 1.0D));
             level.sendParticles(DeepSeekParticles.KILL_TEXT.get(),
-                    at.x, at.y + 0.5D, at.z,
+                    at.x, at.y + 0.3D, at.z,
                     1, 0.0D, 0.0D, 0.0D, 0.0D);
         }
     }

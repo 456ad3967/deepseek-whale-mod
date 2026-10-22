@@ -21,8 +21,8 @@ public class KillTextParticle extends TextureSheetParticle {
         this.xd = xd;
         this.yd = yd;
         this.zd = zd;
-        this.lifetime = 2;
-        this.quadSize = 0.34F + this.random.nextFloat() * 0.06F;
+        this.lifetime = 3;
+        this.quadSize = 0.22F + this.random.nextFloat() * 0.05F;
         this.gravity = 0.0F;
         this.hasPhysics = false;
         this.rCol = 1.0F;
