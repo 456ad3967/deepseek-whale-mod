@@ -17,13 +17,12 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
  * 胖虎鲸攻击系统（需求 1 + 2）。
- * 触发方式：优先攻击伙伴当前目标（狼式目标选择器设定），无目标时自动索敌周围 12 格内最近的敌对生物，冷却 1.5 秒。
+ * 触发方式：狼式——只攻击目标选择器（主人被打→反击 / 主人出手→帮打）设定的目标，不自动索敌，冷却 1.5 秒。
  * 需求1：主目标受 3 点伤害（1.5 心）+ 缓速 III（3 秒）。
  * 需求2：从主目标出发，在 7 格内连锁其他敌对生物，最多额外命中 3 个。
  * 特效：红色代码流（定制）+ 原版 kill_impact/kill_text/爆炸粒子与音效（照抄 0.1.0 WhaleAttack）。
@@ -31,7 +30,6 @@ import net.minecraft.world.phys.Vec3;
 public final class WhaleAttackSystem {
 
     public static final int ATTACK_INTERVAL_TICKS = 30;      // 1.5 秒冷却
-    public static final double ATTACK_RANGE = 12.0D;         // 自动索敌半径
     public static final float DAMAGE = 3.0F;                 // 3 点伤害 = 1.5 心
     public static final int SLOWNESS_TICKS = 60;             // 缓速 3 秒
     public static final int SLOWNESS_AMPLIFIER = 2;          // 等级 III
@@ -48,7 +46,7 @@ public final class WhaleAttackSystem {
         // 无独立注册；由 WhalePetEntity#tick 驱动
     }
 
-    /** 由实体 tick 调用（仅服务端）。 */
+    /** 由实体 tick 调用（仅服务端）。狼式：仅攻击目标选择器（主人被打/主人出手）设定的目标，不自动索敌。 */
     public static void tickWhale(WhalePetEntity whale, ServerLevel level) {
         long now = level.getGameTime();
         if (now % SCAN_INTERVAL != 0L) {
@@ -60,14 +58,9 @@ public final class WhaleAttackSystem {
         }
 
         LivingEntity primary = whale.getTarget();
+        // 狼式核心：目标必须由 OwnerHurtByTargetGoal/OwnerHurtTargetGoal 设定
+        // （主人被打 → 反击；主人打谁 → 帮打）。无目标 = 不出手，只跟随。
         if (primary == null || !primary.isAlive() || primary == whale) {
-            Player owner = whale.getOwnerId() == null ? null : level.getPlayerByUUID(whale.getOwnerId());
-            if (owner == null) {
-                return;
-            }
-            primary = findNearestHostileAround(level, whale, ATTACK_RANGE, whale, null);
-        }
-        if (primary == null) {
             return;
         }
         lastAttackTick.put(whale.getUUID(), (int) now);
@@ -77,7 +70,7 @@ public final class WhaleAttackSystem {
         hitTarget(whale, primary, level);
     }
 
-    /** 命中主目标并连锁：供 FightTargetGoal / 自动索敌共用。 */
+    /** 命中主目标并连锁：供 FightTargetGoal 追击时共用。 */
     public static void hitTarget(WhalePetEntity whale, LivingEntity primary, ServerLevel level) {
         List<LivingEntity> excluded = new ArrayList<>();
         excluded.add(primary);
@@ -147,7 +140,7 @@ public final class WhaleAttackSystem {
         }
     }
 
-    /** 以中心实体为圆心，在半径 range 内找最近的敌对生物。 */
+    /** 以中心实体为圆心，在半径 range 内找最近的敌对生物（仅用于连锁搜索）。 */
     private static LivingEntity findNearestHostileAround(ServerLevel level, LivingEntity center,
                                                          double range, WhalePetEntity whale,
                                                          List<LivingEntity> exclude) {
