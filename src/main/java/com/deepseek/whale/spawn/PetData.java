@@ -3,6 +3,7 @@ package com.deepseek.whale.spawn;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -27,7 +28,7 @@ public final class PetData extends SavedData {
 
     public static PetData get(ServerLevel level) {
         return level.getServer().overworld().getDataStorage()
-                .computeIfAbsent(new Factory<>(PetData::new, PetData::load, null), NAME);
+                .computeIfAbsent(new Factory<PetData>(PetData::new, PetData::load, null), NAME);
     }
 
     /** 该主人的伙伴 UUID；无记录返回 null。 */
@@ -58,7 +59,7 @@ public final class PetData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag list = new ListTag();
         for (Map.Entry<UUID, UUID> e : ownerToPet.entrySet()) {
             CompoundTag entry = new CompoundTag();
