@@ -14,6 +14,8 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -47,6 +49,12 @@ public class WhalePetEntity extends PathfinderMob {
                 .add(Attributes.MAX_HEALTH, 40.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.35D)
                 .add(Attributes.FOLLOW_RANGE, 48.0D);
+    }
+
+    /** 飞行导航：悬浮生物使用，绕开障碍与实体，到达后自动停止。 */
+    @Override
+    protected PathNavigation createNavigation(Level level) {
+        return new FlyingPathNavigation(this, level);
     }
 
     // ------------------------------------------------------------------
@@ -225,10 +233,17 @@ public class WhalePetEntity extends PathfinderMob {
         }
     }
 
-    /** 跟随主人：距离 > 2.5 格时游向主人，靠近后悬停在其斜上方。 */
+    /**
+     * 跟随主人：参照原版 FollowOwnerGoal 的导航寻路方案（飞行导航）。
+     * 距离较远时飞行寻路接近，靠近后导航自动停下；超 12 格触发原版式传送兜底。
+     */
     private class FollowOwnerGoal extends Goal {
 
+        private static final double TELEPORT_DIST_SQR = 144.0D; // 原版宠物 12 格传送阈值
+        private static final double MAX_DIST_SQR = 128.0D * 128.0D;
+
         private Player owner;
+        private int timeToRecalcPath;
 
         FollowOwnerGoal() {
         }
@@ -248,7 +263,7 @@ public class WhalePetEntity extends PathfinderMob {
                 return false;
             }
             Player p = WhalePetEntity.this.level().getPlayerByUUID(WhalePetEntity.this.ownerId);
-            if (p == null || !p.isAlive()) {
+            if (p == null || !p.isAlive() || p.isSpectator()) {
                 return false;
             }
             this.owner = p;
@@ -258,17 +273,18 @@ public class WhalePetEntity extends PathfinderMob {
         @Override
         public boolean canContinueToUse() {
             return this.owner != null && this.owner.isAlive()
-                    && WhalePetEntity.this.distanceToSqr(this.owner) < 128.0D * 128.0D;
+                    && WhalePetEntity.this.distanceToSqr(this.owner) < MAX_DIST_SQR;
         }
 
         @Override
         public void start() {
-            // 无额外启动逻辑
+            this.timeToRecalcPath = 0;
         }
 
         @Override
         public void stop() {
             this.owner = null;
+            WhalePetEntity.this.getNavigation().stop();
         }
 
         @Override
@@ -276,50 +292,37 @@ public class WhalePetEntity extends PathfinderMob {
             if (this.owner == null) {
                 return;
             }
-            // 跟随锚点：主人身后 2.5 格、头顶偏上，避免贴脸堵路
-            Vec3 look = this.owner.getLookAngle();
-            Vec3 back = new Vec3(look.x, 0.0D, look.z);
-            if (back.lengthSqr() < 1.0E-4D) {
-                back = new Vec3(1.0D, 0.0D, 0.0D);
-            } else {
-                back = back.normalize().scale(-2.5D);
-            }
-            Vec3 anchor = this.owner.position().add(back.x, 0.9D, back.z);
-            Vec3 delta = anchor.subtract(WhalePetEntity.this.position());
-            double dist = delta.length();
-
             WhalePetEntity.this.getLookControl().setLookAt(this.owner, 30.0F, 30.0F);
 
-            // 跑远了（>32 格）直接传送到主人身边，等价于原版 PendingTeleports 兜底
-            if (dist > 32.0D) {
-                WhalePetEntity.this.teleportTo(
-                        (net.minecraft.server.level.ServerLevel) WhalePetEntity.this.level(),
-                        this.owner.getX(), this.owner.getY() + 1.0D, this.owner.getZ(),
-                        java.util.Set.of(),
-                        this.owner.getYRot(), 0.0F);
-                WhalePetEntity.this.setDeltaMovement(Vec3.ZERO);
-                // 到达音效（原版 WHALE_ARRIVE）
-                WhalePetEntity.this.level().playSound(null,
-                        this.owner.getX(), this.owner.getY(), this.owner.getZ(),
-                        com.deepseek.whale.DeepSeekSounds.WHALE_ARRIVE.get(),
-                        net.minecraft.sounds.SoundSource.NEUTRAL, 0.7F, 1.0F);
-                return;
+            if (--this.timeToRecalcPath <= 0) {
+                this.timeToRecalcPath = 10;
+                double distSqr = WhalePetEntity.this.distanceToSqr(this.owner);
+                if (distSqr >= TELEPORT_DIST_SQR) {
+                    // 原版传送兜底：超 12 格直接回到主人身边
+                    WhalePetEntity.this.teleportTo(
+                            (ServerLevel) WhalePetEntity.this.level(),
+                            this.owner.getX(), this.owner.getY() + 1.0D, this.owner.getZ(),
+                            java.util.Set.of(),
+                            this.owner.getYRot(), 0.0F);
+                    WhalePetEntity.this.getNavigation().stop();
+                    WhalePetEntity.this.setDeltaMovement(Vec3.ZERO);
+                    WhalePetEntity.this.level().playSound(null,
+                            this.owner.getX(), this.owner.getY(), this.owner.getZ(),
+                            com.deepseek.whale.DeepSeekSounds.WHALE_ARRIVE.get(),
+                            net.minecraft.sounds.SoundSource.NEUTRAL, 0.7F, 1.0F);
+                } else {
+                    // 跟随锚点：主人身后 2.5 格、高度 0.9，用飞行导航寻路（自带避让，不顶着玩家走）
+                    Vec3 look = this.owner.getLookAngle();
+                    Vec3 back = new Vec3(look.x, 0.0D, look.z);
+                    if (back.lengthSqr() < 1.0E-4D) {
+                        back = new Vec3(1.0D, 0.0D, 0.0D);
+                    } else {
+                        back = back.normalize().scale(-2.5D);
+                    }
+                    Vec3 anchor = this.owner.position().add(back.x, 0.9D, back.z);
+                    WhalePetEntity.this.getNavigation().moveTo(anchor.x, anchor.y, anchor.z, 0.9D);
+                }
             }
-
-            double speed = 0.22D;
-            Vec3 move = Vec3.ZERO;
-            if (dist > 3.0D) {
-                // 离锚点太远：靠近
-                Vec3 dir = delta.normalize();
-                double dy = delta.y * 0.12D;
-                dy = Math.max(-0.4D, Math.min(0.4D, dy));
-                move = new Vec3(dir.x * speed, dy, dir.z * speed);
-            } else if (dist < 2.0D) {
-                // 太近：缓退
-                Vec3 dir = delta.normalize();
-                move = new Vec3(-dir.x * 0.05D, 0.0D, -dir.z * 0.05D);
-            }
-            WhalePetEntity.this.setDeltaMovement(move);
 
             // 没有目标时轻微上下浮动（呼吸感）
             double bob = Math.sin(WhalePetEntity.this.tickCount * 0.08D) * 0.02D;
