@@ -311,10 +311,10 @@ public class WhalePetEntity extends PathfinderMob {
                             com.deepseek.whale.DeepSeekSounds.WHALE_ARRIVE.get(),
                             net.minecraft.sounds.SoundSource.NEUTRAL, 0.7F, 1.0F);
                 } else {
-                    // 跟随锚点：玩家正上方 2 格悬浮。不随视线方向变化，
-                    // 玩家转身/看鱼时鱼无需穿越玩家身体，从根上杜绝顶着走。
-                    Vec3 anchor = this.owner.position().add(0.0D, 2.0D, 0.0D);
-                    WhalePetEntity.this.getNavigation().moveTo(anchor.x, anchor.y, anchor.z, 0.9D);
+                    // 照抄原版宠物跟随：导航目标就是玩家本身。
+                    // 鱼是幽灵实体（不阻挡/不被推/不推人），飞到身边直接穿身而过，
+                    // 不顶、不堵、不隐身；导航到达后自动停在你附近。
+                    WhalePetEntity.this.getNavigation().moveTo(this.owner, 0.9D);
                 }
             }
 
