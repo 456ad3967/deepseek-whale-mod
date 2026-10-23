@@ -90,6 +90,11 @@ public class WhalePetEntity extends PathfinderMob {
     }
 
     @Override
+    public void push(net.minecraft.world.entity.Entity entity) {
+        // 与任何实体互不推动：鱼移动穿过玩家时不再顶着玩家走
+    }
+
+    @Override
     public boolean canBeCollidedWith() {
         return false; // 不阻挡玩家行走（但保留碰撞箱用于点击）
     }
@@ -279,7 +284,7 @@ public class WhalePetEntity extends PathfinderMob {
             } else {
                 back = back.normalize().scale(-2.5D);
             }
-            Vec3 anchor = this.owner.position().add(back.x, 0.6D, back.z);
+            Vec3 anchor = this.owner.position().add(back.x, 0.9D, back.z);
             Vec3 delta = anchor.subtract(WhalePetEntity.this.position());
             double dist = delta.length();
 
