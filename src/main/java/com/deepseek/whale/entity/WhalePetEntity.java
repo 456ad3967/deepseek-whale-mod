@@ -311,15 +311,9 @@ public class WhalePetEntity extends PathfinderMob {
                             com.deepseek.whale.DeepSeekSounds.WHALE_ARRIVE.get(),
                             net.minecraft.sounds.SoundSource.NEUTRAL, 0.7F, 1.0F);
                 } else {
-                    // 跟随锚点：主人身后 2.5 格、高度 0.9，用飞行导航寻路（自带避让，不顶着玩家走）
-                    Vec3 look = this.owner.getLookAngle();
-                    Vec3 back = new Vec3(look.x, 0.0D, look.z);
-                    if (back.lengthSqr() < 1.0E-4D) {
-                        back = new Vec3(1.0D, 0.0D, 0.0D);
-                    } else {
-                        back = back.normalize().scale(-2.5D);
-                    }
-                    Vec3 anchor = this.owner.position().add(back.x, 0.9D, back.z);
+                    // 跟随锚点：玩家正上方 2 格悬浮。不随视线方向变化，
+                    // 玩家转身/看鱼时鱼无需穿越玩家身体，从根上杜绝顶着走。
+                    Vec3 anchor = this.owner.position().add(0.0D, 2.0D, 0.0D);
                     WhalePetEntity.this.getNavigation().moveTo(anchor.x, anchor.y, anchor.z, 0.9D);
                 }
             }
